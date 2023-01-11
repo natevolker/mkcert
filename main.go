@@ -192,7 +192,7 @@ func (m *mkcert) Run(args []string) {
 	}
 
 	if m.verifyFile != "" {
-		m.verifyCertificate(m.certFile, m.verifyFile)
+		m.verifyCertificate(m.verifyFile)
 		return
 	}
 

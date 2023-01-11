@@ -393,7 +393,7 @@ func readCertificate(path string) (*x509.Certificate, error) {
 	return x509.ParseCertificate(certDERBlock.Bytes)
 }
 
-func (m *mkcert) verifyCertificate(path string, mode string) {
+func (m *mkcert) verifyCertificate(path string) {
 	msg := "could not verify certificate"
 
 	cert, err := readCertificate(path)
