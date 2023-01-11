@@ -44,6 +44,8 @@ const shortUsage = `Usage of mkcert:
 	$ mkcert -uninstall
 	Uninstall the local CA (but do not delete it).
 
+	$ mkcert -verify example.org.pem
+	Verify "example.org.pem" against the local CA root certificate.
 `
 
 const advancedUsage = `Advanced options:
@@ -93,6 +95,7 @@ func main() {
 	var (
 		installFlag   = flag.Bool("install", false, "")
 		uninstallFlag = flag.Bool("uninstall", false, "")
+		verifyFlag    = flag.Bool("verify", false, "")
 		pkcs12Flag    = flag.Bool("pkcs12", false, "")
 		ecdsaFlag     = flag.Bool("ecdsa", false, "")
 		clientFlag    = flag.Bool("client", false, "")
@@ -130,6 +133,9 @@ func main() {
 		if *installFlag || *uninstallFlag {
 			log.Fatalln("ERROR: you can't set -[un]install and -CAROOT at the same time")
 		}
+		if *verifyFlag {
+			log.Fatalln("ERROR: you can't set -verify and -CAROOT at the same time")
+		}
 		fmt.Println(getCAROOT())
 		return
 	}
@@ -142,10 +148,20 @@ func main() {
 	if *csrFlag != "" && flag.NArg() != 0 {
 		log.Fatalln("ERROR: can't specify extra arguments when using -csr")
 	}
+	if *verifyFlag && flag.NArg() != 1 {
+		log.Fatalln("ERROR: -verify expects a single path as an argument")
+	}
+
+	verifyFile := ""
+	if *verifyFlag {
+		verifyFile = flag.Arg(0)
+	}
+
 	(&mkcert{
 		installMode: *installFlag, uninstallMode: *uninstallFlag, csrPath: *csrFlag,
 		pkcs12: *pkcs12Flag, ecdsa: *ecdsaFlag, client: *clientFlag,
 		certFile: *certFileFlag, keyFile: *keyFileFlag, p12File: *p12FileFlag,
+		verifyFile: verifyFile,
 	}).Run(flag.Args())
 }
 
@@ -157,6 +173,7 @@ type mkcert struct {
 	pkcs12, ecdsa, client      bool
 	keyFile, certFile, p12File string
 	csrPath                    string
+	verifyFile                 string
 
 	CAROOT string
 	caCert *x509.Certificate
@@ -173,6 +190,12 @@ func (m *mkcert) Run(args []string) {
 	if m.CAROOT == "" {
 		log.Fatalln("ERROR: failed to find the default CA location, set one as the CAROOT env var")
 	}
+
+	if m.verifyFile != "" {
+		m.verifyCertificate(m.certFile, m.verifyFile)
+		return
+	}
+
 	fatalIfErr(os.MkdirAll(m.CAROOT, 0755), "failed to create the CAROOT")
 	m.loadCA()
 

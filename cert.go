@@ -15,6 +15,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -365,4 +366,47 @@ func (m *mkcert) newCA() {
 
 func (m *mkcert) caUniqueName() string {
 	return "mkcert development CA " + m.caCert.SerialNumber.String()
+}
+
+func readCertificate(path string) (*x509.Certificate, error) {
+	fp := path
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	if !filepath.IsAbs(path) {
+		fp = filepath.Join(wd, fp)
+	}
+
+	certPEMBlock, err := ioutil.ReadFile(fp)
+	if err != nil {
+		return nil, err
+	}
+
+	certDERBlock, _ := pem.Decode(certPEMBlock)
+	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
+		return nil, errors.New("decode " + fp + ": unexpected content")
+	}
+
+	return x509.ParseCertificate(certDERBlock.Bytes)
+}
+
+func (m *mkcert) verifyCertificate(path string, mode string) {
+	msg := "could not verify certificate"
+
+	cert, err := readCertificate(path)
+	fatalIfErr(err, msg)
+
+	root, err := readCertificate(filepath.Join(m.CAROOT, rootName))
+	fatalIfErr(err, msg)
+
+	pool := x509.NewCertPool()
+	pool.AddCert(root)
+
+	_, err = cert.Verify(x509.VerifyOptions{Roots: pool})
+	fatalIfErr(err, msg)
+
+	log.Println("verified! ✅")
 }
