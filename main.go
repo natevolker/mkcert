@@ -95,12 +95,12 @@ func main() {
 	var (
 		installFlag   = flag.Bool("install", false, "")
 		uninstallFlag = flag.Bool("uninstall", false, "")
-		verifyFlag    = flag.Bool("verify", false, "")
 		pkcs12Flag    = flag.Bool("pkcs12", false, "")
 		ecdsaFlag     = flag.Bool("ecdsa", false, "")
 		clientFlag    = flag.Bool("client", false, "")
 		helpFlag      = flag.Bool("help", false, "")
 		carootFlag    = flag.Bool("CAROOT", false, "")
+		verifyFlag    = flag.String("verify", "", "")
 		csrFlag       = flag.String("csr", "", "")
 		certFileFlag  = flag.String("cert-file", "", "")
 		keyFileFlag   = flag.String("key-file", "", "")
@@ -133,7 +133,7 @@ func main() {
 		if *installFlag || *uninstallFlag {
 			log.Fatalln("ERROR: you can't set -[un]install and -CAROOT at the same time")
 		}
-		if *verifyFlag {
+		if *verifyFlag != "" {
 			log.Fatalln("ERROR: you can't set -verify and -CAROOT at the same time")
 		}
 		fmt.Println(getCAROOT())
@@ -148,20 +148,15 @@ func main() {
 	if *csrFlag != "" && flag.NArg() != 0 {
 		log.Fatalln("ERROR: can't specify extra arguments when using -csr")
 	}
-	if *verifyFlag && flag.NArg() != 1 {
-		log.Fatalln("ERROR: -verify expects a single path as an argument")
-	}
-
-	verifyFile := ""
-	if *verifyFlag {
-		verifyFile = flag.Arg(0)
+	if *verifyFlag != "" && flag.NArg() != 0 {
+		log.Fatalln("ERROR: can't specify extra arguments when using -verify")
 	}
 
 	(&mkcert{
 		installMode: *installFlag, uninstallMode: *uninstallFlag, csrPath: *csrFlag,
 		pkcs12: *pkcs12Flag, ecdsa: *ecdsaFlag, client: *clientFlag,
 		certFile: *certFileFlag, keyFile: *keyFileFlag, p12File: *p12FileFlag,
-		verifyFile: verifyFile,
+		verifyFile: *verifyFlag,
 	}).Run(flag.Args())
 }
 
